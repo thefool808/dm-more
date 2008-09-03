@@ -71,24 +71,24 @@ describe Merb::DataMapperSessionStore do
   end
 
 
-  describe "#destroy_session" do
+  describe "#delete_session" do
     before(:each) do
       @session_container.store_session(@sess_id, {:foo => 'bar'})
     end
 
-    it "responds to #destroy_session" do
-      @session_container.should respond_to(:destroy_session)
+    it "responds to #delete_session" do
+      @session_container.should respond_to(:delete_session)
     end
 
     it "destroys an existing session" do
       @session_container.all.size.should == 1
-      @session_container.destroy_session(@sess_id)
+      @session_container.delete_session(@sess_id)
       @session_container.all.size.should == 0
     end
 
     it "doesn't destroy a session when the key doesn't match" do
       @session_container.all.size.should == 1
-      @session_container.destroy_session('b'*32)
+      @session_container.delete_session('b'*32)
       @session_container.all.size.should == 1
     end
   end

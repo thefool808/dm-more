@@ -41,10 +41,10 @@ module Merb
     end
 
     ##
-    # Destroys a session with the given id
+    # Deletes a session with the given id
     #
     # @param session_id<String> The session to destroy
-    def self.destroy_session(session_id)
+    def self.delete_session(session_id)
       all(:session_id => session_id).destroy!
     end
 
