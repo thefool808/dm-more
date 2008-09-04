@@ -95,7 +95,6 @@ describe Merb::DataMapperSessionStore do
 end
 describe "configuration options" do
   before(:each) do
-    Merb::Plugins.config[:merb_datamapper] = {}
     @session_container = Merb::DataMapperSessionStore
   end
 
@@ -117,7 +116,7 @@ describe "configuration options" do
     end
     it "uses the set table name when it is set" do
       pending "this should work but doesn't"
-      Merb::Plugins.config[:merb_datamapper][:session_storage_name] = 'foo'
+      Merb::Plugins.config[:merb_datamapper][:session_storage_name] = 'foos'
       @session_container.storage_names[:default].should == 'foos'
     end
   end
