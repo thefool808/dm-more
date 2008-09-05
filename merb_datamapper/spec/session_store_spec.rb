@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) / 'spec_helper'
+require File.join(File.dirname(__FILE__), 'spec_helper')
 
 require 'merb/session/data_mapper_session'
 describe Merb::DataMapperSessionStore do
@@ -97,7 +97,9 @@ describe "configuration options" do
   before(:each) do
     @session_container = Merb::DataMapperSessionStore
   end
-
+  after(:each) do
+    Merb::Plugins.config[:merb_datamapper].clear
+  end
 
   describe "repository" do
     it "uses the :default repository when no options are set" do
