@@ -93,6 +93,14 @@ module DataMapper
           enter_proc.call(self)
         end
 
+        def transition!(event_name)
+          machine = self.class.instance_variable_get(:@is_state_machine)[:machine]
+          column = machine.column
+          machine.current_state_name = attribute_get(:"#{column}")
+          machine.fire_event(event_name, self)
+          attribute_set(:"#{column}", machine.current_state_name)
+        end
+
       end # InstanceMethods
 
     end # StateMachine
