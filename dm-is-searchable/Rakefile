@@ -4,36 +4,28 @@ require 'spec/rake/spectask'
 require 'pathname'
 
 ROOT = Pathname(__FILE__).dirname.expand_path
-require ROOT + 'lib/dm-validations/version'
+require ROOT + 'lib/dm-is-searchable/is/version'
 
-AUTHOR = "Guy van den Berg"
-EMAIL  = "vandenberg.guy@gmail.com"
-GEM_NAME = "dm-validations"
-GEM_VERSION = DataMapper::Validations::VERSION
+AUTHOR = "Bernerd Schaefer"
+EMAIL  = "bernerd [a] wieck [d] com"
+GEM_NAME = "dm-is-searchable"
+GEM_VERSION = DataMapper::Is::Searchable::VERSION
 GEM_DEPENDENCIES = [["dm-core", GEM_VERSION]]
-GEM_CLEAN = ["log", "pkg", "coverage"]
-GEM_EXTRAS = { :has_rdoc => true, :extra_rdoc_files => %w[ README.txt LICENSE TODO ] }
+GEM_CLEAN = ["log", "pkg"]
+GEM_EXTRAS = { :has_rdoc => true, :extra_rdoc_files => %w[ README.txt LICENSE ] }
 
 PROJECT_NAME = "datamapper"
-PROJECT_URL  = "http://github.com/sam/dm-more/tree/master/dm-validations"
-PROJECT_DESCRIPTION = PROJECT_SUMMARY = "DataMapper plugin for performing validations on data models"
+PROJECT_URL  = "http://github.com/sam/dm-more/tree/master/dm-is-searchable"
+PROJECT_DESCRIPTION = PROJECT_SUMMARY = "A DataMapper plugin for searching"
 
 require ROOT.parent + 'tasks/hoe'
-
-desc "Generate Documentation"
-rd = Rake::RDocTask.new do |rdoc|
-  rdoc.rdoc_dir = 'doc'
-  rdoc.title = "DataMapper Validations"
-  rdoc.options << '--line-numbers' << '--inline-source' << '--main' << 'README'
-  rdoc.rdoc_files.include(FileList[ 'lib/**/*.rb', 'README', 'LICENSE'])
-end
 
 task :default => [ :spec ]
 
 WIN32 = (RUBY_PLATFORM =~ /win32|mingw|cygwin/) rescue nil
 SUDO  = WIN32 ? '' : ('sudo' unless ENV['SUDOLESS'])
 
-desc "Install #{GEM_NAME} #{GEM_VERSION} (default ruby)"
+desc "Install #{GEM_NAME} #{GEM_VERSION}"
 task :install => [ :package ] do
   sh "#{SUDO} gem install --local pkg/#{GEM_NAME}-#{GEM_VERSION} --no-update-sources", :verbose => false
 end
@@ -41,13 +33,6 @@ end
 desc "Uninstall #{GEM_NAME} #{GEM_VERSION} (default ruby)"
 task :uninstall => [ :clobber ] do
   sh "#{SUDO} gem uninstall #{GEM_NAME} -v#{GEM_VERSION} -I -x", :verbose => false
-end
-
-namespace :jruby do
-  desc "Install #{GEM_NAME} #{GEM_VERSION} with JRuby"
-  task :install => [ :package ] do
-    sh %{#{SUDO} jruby -S gem install --local pkg/#{GEM_NAME}-#{GEM_VERSION} --no-update-sources}, :verbose => false
-  end
 end
 
 desc 'Run specifications'

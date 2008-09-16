@@ -15,16 +15,18 @@ module DataMapper
     # Converts a Resource to a JSON representation.
     def to_json(dirty = false)
       property_list = self.class.properties.select { |key, value| dirty ? self.dirty_attributes.key?(key) : true }
-      inferred_fields = {:type => self.class.storage_name(repository.name)}
-      return (property_list.inject(inferred_fields) do |accumulator, property|
-        accumulator[property.field] =
-          unless property.type.respond_to?(:dump)
-            property.get!(self)
-          else
+      data = {}
+      for property in property_list do
+        raise PersistenceError, '+couchdb_type+ is a reserved column name', caller if property.field == 'couchdb_type'
+        data[property.field] =
+          if property.type.respond_to?(:dump)
             property.type.dump(property.get!(self), property)
+          else
+            property.get!(self)
           end
-        accumulator
-      end).to_json
+      end
+      data[:couchdb_type] = self.class.storage_name(repository.name)
+      return data.to_json
     end
   end
 end
@@ -134,18 +136,18 @@ module DataMapper
                 data = doc["value"]
                   collection.load(
                     query.fields.map do |property|
-                      data[property.field.to_s]
+                      property.typecast(data[property.field.to_s])
                     end
                   )
               end
             end
           end
-        elsif doc['type'] && doc['type'] == query.model.storage_name(repository.name)
+        elsif doc['couchdb_type'] && doc['couchdb_type'] == query.model.storage_name(repository.name)
           data = doc
           Collection.new(query) do |collection|
             collection.load(
               query.fields.map do |property|
-                data[property.field.to_s]
+                property.typecast(data[property.field.to_s])
               end
             )
           end
@@ -159,12 +161,12 @@ module DataMapper
         if doc['rows'] && !doc['rows'].empty?
           data = doc['rows'].first['value']
         elsif !doc['rows']
-          data = doc if doc['type'] && doc['type'] == query.model.storage_name(repository.name)
+          data = doc if doc['couchdb_type'] && doc['couchdb_type'] == query.model.storage_name(repository.name)
         end
         if data
           query.model.load(
             query.fields.map do |property|
-              data[property.field.to_s]
+              property.typecast(data[property.field.to_s])
             end,
             query
           )
@@ -173,12 +175,12 @@ module DataMapper
 
     protected
       def normalize_uri(uri_or_options)
-        if uri_or_options.kind_of?(String)
-          uri_or_options = Addressable::URI.parse(uri_or_options)
+        if uri_or_options.kind_of?(String) || uri_or_options.kind_of?(Addressable::URI)
+          uri_or_options = DataObjects::URI.parse(uri_or_options)
         end
 
-        if uri_or_options.kind_of?(Addressable::URI)
-          return uri_or_options.normalize
+        if uri_or_options.kind_of?(DataObjects::URI)
+          return uri_or_options
         end
 
         adapter  = uri_or_options.delete(:adapter).to_s
@@ -190,7 +192,7 @@ module DataMapper
         query    = uri_or_options.to_a.map { |pair| pair * '=' } * '&'
         query    = nil if query == ''
 
-        return Addressable::URI.new(adapter, user, password, host, port, database, query, nil)
+        return DataObjects::URI.parse(Addressable::URI.new(adapter, user, password, host, port, database, query, nil))
       end
 
       def build_request(query)
@@ -237,7 +239,7 @@ module DataMapper
           request.body =
 %Q({"map":
   "function(doc) {
-  if (doc.type == '#{query.model.storage_name(self.name)}') {
+  if (doc.couchdb_type == '#{query.model.storage_name(self.name)}') {
     emit(#{key}, doc);
     }
   }"
@@ -267,7 +269,7 @@ module DataMapper
           request.body =
 %Q({"map":
   "function(doc) {
-    if (doc.type == '#{query.model.storage_name(self.name)}' && #{conditions.join(" && ")}) {
+    if (doc.couchdb_type == '#{query.model.storage_name(self.name)}' && #{conditions.join(" && ")}) {
       emit(#{key}, doc);
     }
   }"
