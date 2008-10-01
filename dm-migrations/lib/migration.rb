@@ -53,12 +53,12 @@ module DataMapper
     def perform_up
       result = nil
       if needs_up?
-        # DataMapper.database.adapter.transaction do
-        say_with_time "== Performing Up Migration ##{position}: #{name}", 0 do
-          result = @up_action.call
+        database.transaction.commit do
+          say_with_time "== Performing Up Migration ##{position}: #{name}", 0 do
+            result = @up_action.call
+          end
+          update_migration_info(:up)
         end
-        update_migration_info(:up)
-        # end
       end
       result
     end
@@ -67,12 +67,12 @@ module DataMapper
     def perform_down
       result = nil
       if needs_down?
-        # DataMapper.database.adapter.transaction do
-        say_with_time "== Performing Down Migration ##{position}: #{name}", 0 do
-          result = @down_action.call
+        database.transaction.commit do
+          say_with_time "== Performing Down Migration ##{position}: #{name}", 0 do
+            result = @down_action.call
+          end
+          update_migration_info(:down)
         end
-        update_migration_info(:down)
-        # end
       end
       result
     end
@@ -96,6 +96,22 @@ module DataMapper
       TableModifier.new(@adapter, table_name, opts, &block).statements.each do |sql|
         execute(sql)
       end
+    end
+
+    def create_index(table_name, *columns_and_options)
+      if columns_and_options.last.is_a?(Hash)
+        opts = columns_and_options.pop
+      else
+        opts = {}
+      end
+      columns = columns_and_options.flatten
+
+      opts[:name] ||= "#{opts[:unique] ? 'unique_' : ''}index_#{table_name}_#{columns.join('_')}"
+
+      execute <<-SQL.compress_lines
+        CREATE #{opts[:unique] ? 'UNIQUE ' : '' }INDEX #{quote_column_name(opts[:name])} ON
+        #{quote_table_name(table_name)} (#{columns.map { |c| quote_column_name(c) }.join(', ') })
+      SQL
     end
 
     # Orders migrations by position, so we know what order to run them in.
@@ -186,5 +202,12 @@ module DataMapper
       @migration_name_column ||= @adapter.send(:quote_column_name, 'migration_name')
     end
 
+    def quote_table_name(table_name)
+      @adapter.send(:quote_table_name, table_name.to_s)
+    end
+
+    def quote_column_name(column_name)
+      @adapter.send(:quote_column_name, column_name.to_s)
+    end
   end
 end
