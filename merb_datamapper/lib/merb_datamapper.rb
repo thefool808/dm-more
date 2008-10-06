@@ -26,13 +26,31 @@ if defined?(Merb::Plugins)
         require File.dirname(__FILE__) / "merb" / "session" / "data_mapper_session"
       end
 
-      # required to provide 'to_param'
-      require File.dirname(__FILE__) / "merb" / "orms" / "data_mapper" / "resource"
+      # take advantage of the fact #id returns the key of the model, unless #id is a property
+      Merb::Router.root_behavior = Merb::Router.root_behavior.identify(DataMapper::Resource => :id)
 
       Merb.logger.debug "Merb::Orms::DataMapper::Connect complete"
     end
   end
 
+  class Merb::Orms::DataMapper::Associations < Merb::BootLoader
+    after LoadClasses
+
+    def self.run
+      Merb.logger.debug 'Merb::Orms::DataMapper::Associations block.'
+
+      # make sure all relationships are initialized after loading
+      descendants = DataMapper::Resource.descendants.dup
+      descendants.each do |model|
+        descendants.merge(model.descendants) if model.respond_to?(:descendants)
+      end
+      descendants.each do |model|
+        model.relationships.each_value { |r| r.child_key }
+      end
+
+      Merb.logger.debug 'Merb::Orms::DataMapper::Associations complete'
+    end
+  end
 
   generators = File.join(File.dirname(__FILE__), 'generators')
   Merb.add_generators generators / 'data_mapper_model'

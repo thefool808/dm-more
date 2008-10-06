@@ -77,7 +77,7 @@ describe DataMapper::Adapters::CouchdbAdapter do
     unless @no_connection
       begin
         @adapter.send(:http_put, "/#{@adapter.escaped_db_name}")
-        create_procedures
+        DataMapper.auto_migrate!
       rescue Errno::ECONNREFUSED
         @no_connection = true
       end
@@ -149,6 +149,11 @@ describe DataMapper::Adapters::CouchdbAdapter do
   it "should get all records" do
     pending("No CouchDB connection.") if @no_connection
     User.all.length.should == 3
+  end
+
+  it "should set total_rows on collection" do
+    pending("No CouchDB connection.") if @no_connection
+    User.all.total_rows.should == 3
   end
 
   it "should get records by eql matcher" do
@@ -270,11 +275,6 @@ describe DataMapper::Adapters::CouchdbAdapter do
     it "should work with has n associations" do
       @company.users.should include(@user)
     end
-  end
-
-  def create_procedures
-    DataMapper.auto_migrate!
-    DataMapper.auto_migrate!
   end
 
   def new_user(options = {})
