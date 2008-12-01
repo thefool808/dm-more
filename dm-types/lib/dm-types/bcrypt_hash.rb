@@ -8,22 +8,22 @@ module DataMapper
       size 60
 
       def self.load(value, property)
-        if value.nil?
-          nil
-        elsif value.is_a?(String)
-          BCrypt::Password.new(value)
-        else
-          raise ArgumentError.new("+value+ must be nil or a String")
-        end
+        typecast(value, property)
       end
 
       def self.dump(value, property)
+        typecast(value, property)
+      end
+ 
+      def self.typecast(value, property)
         if value.nil?
           nil
-        elsif value.is_a?(String)
-          BCrypt::Password.create(value, :cost => BCrypt::Engine::DEFAULT_COST)
         else
-          raise ArgumentError.new("+value+ must be nil or a String")
+          begin
+            value.is_a?(BCrypt::Password) ? value : BCrypt::Password.new(value)
+          rescue BCrypt::Errors::InvalidHash
+            BCrypt::Password.create(value, :cost => BCrypt::Engine::DEFAULT_COST)
+          end
         end
       end
     end # class BCryptHash

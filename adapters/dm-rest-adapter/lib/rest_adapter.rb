@@ -1,10 +1,11 @@
 require 'rubygems'
 require 'pathname'
 require Pathname(__FILE__).dirname + 'rest_adapter/version'
-gem 'dm-core', DataMapper::More::RestAdapter::VERSION
+
+gem 'dm-core', '~>0.9.7'
 require 'dm-core'
 
-gem 'extlib', '>=0.9.5'
+gem 'extlib', '~>0.9.8'
 require 'extlib'
 
 require 'dm-serializer'
@@ -193,8 +194,7 @@ module DataMapper
         resource[:values] = []
         entity_element.elements.each do |field_element|
           attribute = dm_model_class.properties(repository.name).find do |property|
-            # *MUST* use Inflection.underscore on the XML as Rails converts '_' to '-' in the XML
-            property.name.to_s == Inflection.underscore(field_element.name.to_s)
+            property.name.to_s == field_element.name.to_s.tr('-', '_')
           end
           if attribute
             resource[:values] << field_element.text

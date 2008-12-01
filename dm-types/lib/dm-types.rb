@@ -1,7 +1,7 @@
 require 'rubygems'
 require 'pathname'
 
-gem 'dm-core', '=0.9.6'
+gem 'dm-core', '~>0.9.7'
 require 'dm-core'
 
 dir = Pathname(__FILE__).dirname.expand_path / 'dm-types'
@@ -18,7 +18,7 @@ require dir / 'uuid'
 require dir / 'yaml'
 require dir / 'serial'
 require dir / 'regexp'
-require dir / 'permalink'
+require dir / 'slug'
 
 # this looks a little ugly, but everyone who uses dm-types shouldn't have to have ruby-bcrypt installed
 module DataMapper

@@ -1,7 +1,7 @@
 require 'rubygems'
 require 'pathname'
 
-gem 'dm-core', '=0.9.6'
+gem 'dm-core', '~>0.9.7'
 require 'dm-core'
 
 spec_dir_path = Pathname(__FILE__).dirname.expand_path
@@ -13,7 +13,7 @@ def load_driver(name, default_uri)
   lib = "do_#{name}"
 
   begin
-    gem lib, '>=0.9.5'
+    gem lib, '~>0.9.7'
     require lib
     DataMapper.setup(name, ENV["#{name.to_s.upcase}_SPEC_URI"] || default_uri)
     DataMapper::Repository.adapters[:default] =  DataMapper::Repository.adapters[name]
@@ -31,6 +31,13 @@ HAS_SQLITE3  = load_driver(:sqlite3,  'sqlite3::memory:')
 HAS_MYSQL    = load_driver(:mysql,    'mysql://localhost/dm_core_test')
 HAS_POSTGRES = load_driver(:postgres, 'postgres://postgres@localhost/dm_core_test')
 
+class SerializerTestHarness
+  def test(object, *args)
+    deserialize(object.send(method_name, *args))
+  end
+end
+
+require spec_dir_path + 'lib/serialization_method_shared_spec'
 
 # require fixture resources
 Dir[spec_dir_path + "fixtures/*.rb"].each do |fixture_file|

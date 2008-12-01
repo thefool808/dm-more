@@ -1,5 +1,5 @@
 require 'rubygems'
-gem 'dm-core', '=0.9.6'
+gem 'dm-core', '~>0.9.7'
 require 'dm-core'
 require 'benchmark'
 require File.dirname(__FILE__) + '/sql'
@@ -53,12 +53,13 @@ module DataMapper
     def perform_up
       result = nil
       if needs_up?
-        database.transaction.commit do
+        # TODO: fix this so it only does transactions for databases that support create/drop
+        # database.transaction.commit do
           say_with_time "== Performing Up Migration ##{position}: #{name}", 0 do
             result = @up_action.call
           end
           update_migration_info(:up)
-        end
+        # end
       end
       result
     end
@@ -67,20 +68,21 @@ module DataMapper
     def perform_down
       result = nil
       if needs_down?
-        database.transaction.commit do
+        # TODO: fix this so it only does transactions for databases that support create/drop
+        # database.transaction.commit do
           say_with_time "== Performing Down Migration ##{position}: #{name}", 0 do
             result = @down_action.call
           end
           update_migration_info(:down)
-        end
+        # end
       end
       result
     end
 
     # execute raw SQL
-    def execute(sql)
+    def execute(sql, *bind_values)
       say_with_time(sql) do
-        @adapter.execute(sql)
+        @adapter.execute(sql, *bind_values)
       end
     end
 
@@ -194,19 +196,21 @@ module DataMapper
 
     # Quoted table name, for the adapter
     def migration_info_table
-      @migration_info_table ||= @adapter.send(:quote_table_name, 'migration_info')
+      @migration_info_table ||= quote_table_name('migration_info')
     end
 
     # Quoted `migration_name` column, for the adapter
     def migration_name_column
-      @migration_name_column ||= @adapter.send(:quote_column_name, 'migration_name')
+      @migration_name_column ||= quote_column_name('migration_name')
     end
 
     def quote_table_name(table_name)
+      # TODO: Fix this for 1.9 - can't use this hack to access a private method
       @adapter.send(:quote_table_name, table_name.to_s)
     end
 
     def quote_column_name(column_name)
+      # TODO: Fix this for 1.9 - can't use this hack to access a private method
       @adapter.send(:quote_column_name, column_name.to_s)
     end
   end

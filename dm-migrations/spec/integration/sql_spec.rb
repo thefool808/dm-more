@@ -1,8 +1,7 @@
 require 'pathname'
 require Pathname(__FILE__).dirname.expand_path.parent + 'spec_helper'
 
-[:sqlite3, :mysql, :postgres].each do |adapter|
-  next unless eval("HAS_#{adapter.to_s.upcase}")
+ADAPTERS.each do |adapter|
   describe "Using Adapter #{adapter}," do
     describe DataMapper::Migration, "#create_table helper" do
       before do
@@ -111,12 +110,12 @@ require Pathname(__FILE__).dirname.expand_path.parent + 'spec_helper'
         @migration.send(:needs_down?).should be_true
       end
 
-      it "should properly quote the migration_info table for use in queries" do
-        @migration.send(:migration_info_table).should == '"migration_info"'
+      it "should properly quote the migration_info table via the adapter for use in queries" do
+        @migration.send(:migration_info_table).should == @migration.quote_table_name("migration_info")
       end
 
-      it "should properly quote the migration_info.migration_name column for use in queries" do
-        @migration.send(:migration_name_column).should == '"migration_name"'
+      it "should properly quote the migration_info.migration_name column via the adapter for use in queries" do
+        @migration.send(:migration_name_column).should == @migration.quote_column_name("migration_name")
       end
 
       it "should properly quote the migration's name for use in queries"

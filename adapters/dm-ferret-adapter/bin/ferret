@@ -4,12 +4,13 @@ require "dm-core"
 require "ferret_adapter"
 
 require "fileutils"
-require "rinda/ring"
+require "drb"
+require "drb/unix"
 require "rinda/tuplespace"
 require "optparse"
 
 options = {
-  :name => ":ferret_index:",
+  :name => "ferret_index",
   :index => Dir.pwd + "/index",
   :pid_file => "tmp/ferret.pid",
   :log_file => "log/ferret.log",
@@ -18,12 +19,11 @@ options = {
 
 option_parser = OptionParser.new do |opts|
   opts.banner = "Usage: ferret.rb [options] start|stop"
-  opts.on("-n", "--name NAME", "The name to use for the Rinda Ring service. Defaults to ':ferret_index:'.") { |name| options[:name] = name }
+  opts.on("-n", "--name NAME", "The name to use for the Rinda Ring service. Defaults to 'ferret_index'.") { |name| options[:name] = name }
   opts.on("-P", "--pid PIDFILE", "PID file, defaults to tmp/ferret.pid") { |pid| options[:pid_file] = pid }
   opts.on("-L", "--log LOGFILE", "Log file, defaults to log/ferret.log") { |log| options[:log_file] = log }
   opts.on("-l", "--log-level LEVEL", [:debug, :error], "Log levels can be: debug, error. Default is error.") { |level| options[:log_level] = level }
   opts.on("-i", "--index INDEX", "Index path. Defaults to Dir.pwd + '/index'") { |index| options[:index] = index }
-  # opts.on_tail("-h", "--help", "Show this message") { puts opts; exit }
 end
 
 unless %w(start stop).include? ARGV.last
@@ -54,21 +54,20 @@ else
     end
     STDERR.reopen options[:log_file], "a"
 
-    STDOUT.puts "Starting server."
-    STDOUT.flush
+    tuple_space = Rinda::TupleSpace.new
 
-    # Remove the PID file at exit
-    at_exit { File.unlink(options[:pid_file]) if options[:pid_file] }
+    DRb.start_service "drbunix:///tmp/#{options[:name]}.sock", tuple_space
+
+    STDOUT.puts "Server started at #{DRb.uri}"
+    STDOUT.flush
 
     # Write the process id to the specified :pid_file
     File.open(options[:pid_file], "w") { |f| f.write(Process.pid) }
 
-    DRb.start_service
-
-    tuple_space = Rinda::TupleSpace.new
-
-    Rinda::RingServer.new(tuple_space)
-    Rinda::RingProvider.new(:TupleSpace, tuple_space, options[:name]).provide
+    # Cleanup the pid.
+    at_exit do
+      File.unlink(options[:pid_file]) if options[:pid_file]
+    end
 
     uri = Addressable::URI.parse(options[:index])
     @index = DataMapper::Adapters::FerretAdapter::LocalIndex.new(uri)

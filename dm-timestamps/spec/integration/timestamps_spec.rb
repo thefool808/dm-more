@@ -3,7 +3,8 @@ require Pathname(__FILE__).dirname.expand_path.parent + 'spec_helper'
 
 if HAS_SQLITE3 || HAS_MYSQL || HAS_POSTGRES
   describe 'DataMapper::Timestamp' do
-    before :all do
+    before do
+      Object.send(:remove_const, :GreenSmoothie) if defined?(GreenSmoothie)
       class GreenSmoothie
         include DataMapper::Resource
 
@@ -16,10 +17,6 @@ if HAS_SQLITE3 || HAS_MYSQL || HAS_POSTGRES
 
         auto_migrate!(:default)
       end
-    end
-
-    after do
-     repository(:default).adapter.execute('DELETE from green_smoothies');
     end
 
     it "should not set the created_at/on fields if they're already set" do
@@ -107,5 +104,49 @@ if HAS_SQLITE3 || HAS_MYSQL || HAS_POSTGRES
       end
     end
 
+    describe "inclusion" do
+      before :each do
+        @klass = Class.new do
+          include DataMapper::Resource
+        end
+      end
+
+      it "should provide #timestamps" do
+        @klass.should respond_to(:timestamps)
+      end
+
+      it "should set the *at properties" do
+        @klass.timestamps :at
+
+        @klass.properties.should have_property(:created_at)
+        @klass.properties[:created_at].type.should == DateTime
+        @klass.properties.should have_property(:updated_at)
+        @klass.properties[:updated_at].type.should == DateTime
+      end
+
+      it "should set the *on properties" do
+        @klass.timestamps :on
+
+        @klass.properties.should have_property(:created_on)
+        @klass.properties[:created_on].type.should == Date
+        @klass.properties.should have_property(:updated_on)
+        @klass.properties[:updated_on].type.should == Date
+      end
+
+      it "should set multiple properties" do
+        @klass.timestamps :created_at, :updated_on
+
+        @klass.properties.should have_property(:created_at)
+        @klass.properties.should have_property(:updated_on)
+      end
+
+      it "should fail on unknown property name" do
+        lambda { @klass.timestamps :wowee }.should raise_error(DataMapper::Timestamp::InvalidTimestampName)
+      end
+
+      it "should fail on empty arguments" do
+        lambda { @klass.timestamps }.should raise_error(ArgumentError)
+      end
+    end
   end
 end

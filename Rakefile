@@ -8,28 +8,31 @@ include FileUtils
 ## ORDER IS IMPORTANT
 # gems may depend on other member gems of dm-more
 gem_paths = %w[
-  adapters/dm-couchdb-adapter
-  adapters/dm-rest-adapter
   dm-adjust
+  dm-serializer
+  dm-validations
+  dm-types
+  adapters/dm-couchdb-adapter
+  adapters/dm-ferret-adapter
+  adapters/dm-rest-adapter
   dm-aggregates
   dm-ar-finders
   dm-cli
   dm-constraints
   dm-is-list
   dm-is-nested_set
+  dm-is-remixable
+  dm-is-searchable
   dm-is-state_machine
   dm-is-tree
+  dm-is-versioned
   dm-migrations
   dm-observer
   dm-querizer
-  dm-serializer
   dm-shorthand
   dm-sweatshop
+  dm-tags
   dm-timestamps
-  dm-sweatshop
-  dm-types
-  dm-validations
-  merb_datamapper
 ]
 
 gems = gem_paths.map { |p| File.basename(p) }
@@ -40,7 +43,7 @@ AUTHOR = "Sam Smoot"
 EMAIL  = "ssmoot@gmail.com"
 GEM_NAME = "dm-more"
 GEM_VERSION = DataMapper::More::VERSION
-GEM_DEPENDENCIES = [["dm-core", GEM_VERSION], *(gems - %w[ merb_datamapper ]).collect { |g| [g, GEM_VERSION] }]
+GEM_DEPENDENCIES = [['dm-core', "~>#{GEM_VERSION}"], *gems.map { |g| [g, "~>#{GEM_VERSION}"] }]
 GEM_CLEAN = ['**/.DS_Store}', '*.db', "doc/rdoc", ".config", "**/{coverage,log,pkg}", "cache", "lib/merb-more.rb"]
 GEM_EXTRAS = { :has_rdoc => false }
 
@@ -118,18 +121,13 @@ task :release_all do
   end
 end
 
-task :ci do
-  gem_paths.each do |gem_name|
-    Dir.chdir(gem_name){ sh("rake ci") }
+%w[ ci spec clean clobber check_manifest ].each do |command|
+  task command do
+    gem_paths.each do |gem_name|
+      Dir.chdir(gem_name){ sh("rake #{command}") }
+    end
   end
 end
-
-task :spec do
-  gem_paths.each do |gem_name|
-    Dir.chdir(gem_name){ sh("rake spec") }
-  end
-end
-
 
 namespace :dm do
   desc 'Run specifications'
@@ -147,3 +145,5 @@ namespace :dm do
     end
   end
 end
+
+task :default => :spec

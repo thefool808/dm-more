@@ -28,28 +28,28 @@ module DataMapper
 
         @list_options = options
 
-        before :save do
-          if self.new_record?
-            # a position has been set before save => open up and make room for item
-            # no position has been set => move to bottom of my scope-list (or keep detached?)
-            self.send(:move_without_saving, (self.position || :lowest))
-          else
-            # if the scope has changed, we need to detach our item from the old list
-            if self.list_scope != self.original_list_scope
-              newpos = self.position
+        before :create do
+          # a position has been set before save => open up and make room for item
+          # no position has been set => move to bottom of my scope-list (or keep detached?)
+          self.send(:move_without_saving, (self.position || :lowest))
+        end
 
-              self.detach(self.original_list_scope) # removing from old list
-              self.send(:move_without_saving, newpos || :lowest) # moving to pos or bottom of new list
-
-            elsif self.attribute_dirty?(:position) && !self.moved
-              self.send(:move_without_saving, self.position)
-            else
-              self.moved = false
-            end
-            # a (new) position has been set => move item to this position (only if position has been set manually)
-            # the scope has changed => detach from old list, and possibly move into position
-            # the scope and position has changed => detach from old, move to pos in new
+        before :update do
+          # if the scope has changed, we need to detach our item from the old list
+          if self.list_scope != self.original_list_scope
+            newpos = self.position
+            self.detach(self.original_list_scope) # removing from old list
+            self.send(:move_without_saving, newpos || :lowest) # moving to pos or bottom of new list
+          elsif self.attribute_dirty?(:position) && !self.moved
+            self.send(:move_without_saving, self.position)
           end
+
+          # on update, clean moved to prepare for the next change
+          self.moved = false
+
+          # a (new) position has been set => move item to this position (only if position has been set manually)
+          # the scope has changed => detach from old list, and possibly move into position
+          # the scope and position has changed => detach from old, move to pos in new
         end
 
         before :destroy do
@@ -150,8 +150,7 @@ module DataMapper
         # @return <TrueClass, FalseClass> returns false if it cannot move to the position, otherwise true
         # @see move_without_saving
         def move(vector)
-          move_without_saving(vector)
-          save
+          move_without_saving(vector) && save
         end
 
         ##
@@ -166,6 +165,7 @@ module DataMapper
           minpos = self.class.list_options[:first]
           prepos = self.original_values[:position] || self.position
           maxpos = list.last ? (list.last == self ? prepos : list.last.position + 1) : minpos
+
           newpos = case action
             when :highest     then minpos
             when :lowest      then maxpos
@@ -177,6 +177,7 @@ module DataMapper
             else [action.to_i,maxpos].min
           end
 
+          return false if [:lower, :higher].include?(action) && newpos == prepos
           return false if !newpos || ([:above,:below].include?(action) && list_scope != object.list_scope)
           return true if newpos == position && position == prepos || (newpos == maxpos && position == maxpos-1)
 

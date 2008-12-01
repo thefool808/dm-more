@@ -2,13 +2,13 @@ module DataMapper
   module Adapters
     class FerretAdapter::RemoteIndex
 
+      class IndexNotFound < Exception; end
+      class SearchError < Exception; end
+
       attr_accessor :uri
 
       def initialize(uri)
         @uri = uri
-
-        require "rinda/ring"
-        DRb.start_service
 
         connect_to_remote_index
       end
@@ -26,7 +26,7 @@ module DataMapper
         @index.write [:search, DRb.uri, tuple]
         result = @index.take([:search_result, DRb.uri, tuple, nil]).last
         if result == nil
-          raise "An error occurred performing this search. Check the Ferret logs."
+          raise SearchError.new("An error occurred performing this search. Check the Ferret logs.")
         end
         result
       end
@@ -34,17 +34,20 @@ module DataMapper
       private
 
       def connect_to_remote_index
-        @server = Rinda::RingFinger.primary
-        services = @server.read_all [:name, nil, nil, nil]
+        require "drb"
+        require "drb/unix"
+        require "rinda/tuplespace"
 
-        if services.detect { |service| service[3] == @uri.path }
-          tuple_space = @server.read([:name, :TupleSpace, nil, @uri.path])[2]
-          @index = Rinda::TupleSpaceProxy.new tuple_space
-        else
-          raise
-        end
-      rescue
-        raise "Your remote index server is not running."
+        DRb.start_service
+        tuple_space = DRb::DRbObject.new(nil, "drbunix://#{@uri.path}")
+
+        # This will throw Errno::ENOENT if the socket does not exist.
+        tuple_space.respond_to?(:write)
+
+        @index = Rinda::TupleSpaceProxy.new(tuple_space)
+
+      rescue Errno::ENOENT
+        raise IndexNotFound.new("Your remote index server is not running.")
       end
 
     end

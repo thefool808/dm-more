@@ -2,7 +2,7 @@ require 'rubygems'
 require 'pathname'
 require Pathname(__FILE__).dirname + 'ferret_adapter/version'
 
-gem 'dm-core', DataMapper::More::FerretAdapter::VERSION
+gem 'dm-core', '~>0.9.7'
 require 'dm-core'
 
 gem "ferret"
@@ -13,10 +13,10 @@ module DataMapper
     class FerretAdapter < AbstractAdapter
       def initialize(name, uri_or_options)
         super
-        if @uri.path[0, 1] == ":"
-          @index = RemoteIndex.new(@uri)
-        else
+        unless File.extname(@uri.path) == ".sock"
           @index = LocalIndex.new(@uri)
+        else
+          @index = RemoteIndex.new(@uri)
         end
       end
 
@@ -27,7 +27,13 @@ module DataMapper
             attrs.delete_if { |name, value| !resource.class.properties(self.name).has_property?(name) }
             resource.class.new(attrs).attributes
           end
-          attributes.merge!(:_type => resource.class.name)
+
+          # Since we don't inspect the models before generating the indices,
+          # we'll map the resource's key to the :id column.
+          key = resource.class.key.first
+          attributes[:id] = attributes.delete(key.name) unless key.name == :id
+          attributes[:_type] = resource.class.name
+
           @index.add attributes
         end
         1

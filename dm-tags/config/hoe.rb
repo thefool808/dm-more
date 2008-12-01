@@ -6,11 +6,12 @@ DESCRIPTION = <<-DESC
 This package brings tagging to DataMapper.  It is inspired by Acts As Taggable On by Michael Bleigh, github's mbleigh.  Props to him for the contextual tagging based on Acts As Taggable on Steroids.
 DESC
 GEM_NAME = 'dm-tags' # what ppl will type to install your gem
-RUBYFORGE_PROJECT = 'dm-tags' # The unix name for your project
+RUBYFORGE_PROJECT = 'datamapper' # The unix name for your project
 HOMEPATH = "http://#{RUBYFORGE_PROJECT}.rubyforge.org"
 DOWNLOAD_PATH = "http://rubyforge.org/projects/#{RUBYFORGE_PROJECT}"
 EXTRA_DEPENDENCIES = [
- ['dm-core', '>= 0.9.3']
+ ['dm-core', '~>0.9.7'],
+ ['dm-validations', '~>0.9.7'],
 ]    # An array of rubygem dependencies [name, version]
 
 @config_file = "~/.rubyforge/user-config.yml"
